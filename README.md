@@ -1,6 +1,6 @@
 # Item-Stream
 
-Allows for producing asyncronous values from the outputs of streams. Creates an abstraction over the Stream + Futures(Un)Ordered fields of a struct.
+Allows for producing asyncronous values from the outputs of streams. An abstraction over the Stream + Futures(Un)Ordered fields of a struct.
 
 ```rust
 pub struct ItemStream<STREAM, STEP, FUTS> {
