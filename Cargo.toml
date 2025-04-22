@@ -1,0 +1,15 @@
+[package]
+name = "item-stream"
+version = "0.1.0"
+edition = "2024"
+
+
+[lib]
+name = "item_stream"
+
+[dependencies]
+futures = "0.3"
+
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
