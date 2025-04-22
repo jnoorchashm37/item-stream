@@ -15,7 +15,6 @@ pub struct ItemStream<STREAM, STEP, FUTS> {
     stream: STREAM,
     step_fn: STEP,
     futures_handler: FUTS,
-    stream_dead: bool,
 }
 
 impl<STREAM, STEP, FUTS, O, F> ItemStream<STREAM, STEP, FUTS>
@@ -30,7 +29,6 @@ where
             stream,
             step_fn,
             futures_handler,
-            stream_dead: false,
         }
     }
 
@@ -50,7 +48,6 @@ where
             stream,
             step_fn,
             futures_handler: FuturesOrdered::new(),
-            stream_dead: false,
         }
     }
 }
@@ -66,7 +63,6 @@ where
             stream,
             step_fn,
             futures_handler: FuturesUnordered::new(),
-            stream_dead: false,
         }
     }
 }
@@ -83,21 +79,19 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
 
-        if !this.stream_dead {
-            while let Poll::Ready(stream_out_opt) = this.stream.poll_next_unpin(cx) {
-                if let Some(stream_out) = stream_out_opt {
-                    this.futures_handler.push_fut((this.step_fn)(stream_out));
+        while let Poll::Ready(stream_out_opt) = this.stream.poll_next_unpin(cx) {
+            if let Some(stream_out) = stream_out_opt {
+                this.futures_handler.push_fut((this.step_fn)(stream_out));
 
-                    if let Poll::Ready(Some(fut_out)) = this.futures_handler.poll_next_unpin(cx) {
-                        return Poll::Ready(Some(fut_out));
-                    }
-                } else {
-                    this.stream_dead = true;
-                    break;
+                if let Poll::Ready(Some(fut_out)) = this.futures_handler.poll_next_unpin(cx) {
+                    return Poll::Ready(Some(fut_out));
                 }
+            } else {
+                if this.futures_handler.is_empty() {
+                    return Poll::Ready(None);
+                }
+                break;
             }
-        } else if this.futures_handler.is_empty() {
-            return Poll::Ready(None);
         }
 
         if let Poll::Ready(Some(fut_out)) = this.futures_handler.poll_next_unpin(cx) {
