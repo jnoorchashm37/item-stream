@@ -11,80 +11,73 @@ use futures::Stream;
 
 use crate::FuturesArray;
 
-pub struct ItemStream<STREAM, STEP, FUTS> {
+pub struct ItemStream<STREAM, STEP, FUTS, ARGS> {
     stream: STREAM,
     step_fn: STEP,
     futures_handler: FUTS,
+    args: ARGS,
 }
 
-impl<STREAM, STEP, FUTS, O, F> ItemStream<STREAM, STEP, FUTS>
+impl<STREAM, STEP, FUTS, O, F, ARGS> ItemStream<STREAM, STEP, FUTS, ARGS>
 where
     STREAM: Stream,
-    STEP: FnMut(STREAM::Item) -> F,
+    STEP: FnMut(STREAM::Item, ARGS) -> F,
     FUTS: FuturesArray<F>,
     F: Future<Output = O>,
 {
-    pub fn new(stream: STREAM, step_fn: STEP, futures_handler: FUTS) -> Self {
+    pub fn new(stream: STREAM, step_fn: STEP, futures_handler: FUTS, args: ARGS) -> Self {
         Self {
             stream,
             step_fn,
             futures_handler,
+            args,
         }
     }
 
-    pub fn add_to_stream(&mut self, item: STREAM::Item) {
-        self.futures_handler.push_fut((self.step_fn)(item));
+    pub fn add_to_stream(&mut self, item: STREAM::Item, args: ARGS) {
+        self.futures_handler.push_fut((self.step_fn)(item, args));
     }
 }
 
-impl<STREAM, STEP, O, F> ItemStream<STREAM, STEP, FuturesOrdered<F>>
+impl<STREAM, STEP, O, F, ARGS> ItemStream<STREAM, STEP, FuturesOrdered<F>, ARGS>
 where
     STREAM: Stream,
-    STEP: FnMut(STREAM::Item) -> F,
+    STEP: FnMut(STREAM::Item, ARGS) -> F,
     F: Future<Output = O>,
 {
-    pub fn new_ordered(stream: STREAM, step_fn: STEP) -> Self {
+    pub fn new_ordered(stream: STREAM, step_fn: STEP, args: ARGS) -> Self {
         Self {
             stream,
             step_fn,
             futures_handler: FuturesOrdered::new(),
+            args,
         }
     }
 }
 
-impl<STREAM, STEP, O, F> ItemStream<STREAM, STEP, FuturesUnordered<F>>
+impl<STREAM, STEP, O, F, ARGS> ItemStream<STREAM, STEP, FuturesUnordered<F>, ARGS>
 where
     STREAM: Stream,
-    STEP: FnMut(STREAM::Item) -> F,
+    STEP: FnMut(STREAM::Item, ARGS) -> F,
     F: Future<Output = O>,
 {
-    pub fn new_unordered(stream: STREAM, step_fn: STEP) -> Self {
+    pub fn new_unordered(stream: STREAM, step_fn: STEP, args: ARGS) -> Self {
         Self {
             stream,
             step_fn,
             futures_handler: FuturesUnordered::new(),
+            args,
         }
     }
 }
 
-impl<STREAM, STEP, FUTS, O, F> ItemStream<STREAM, STEP, FUTS>
-where
-    STREAM: Stream + Unpin + Send + 'static,
-    STEP: FnMut(STREAM::Item) -> F + Unpin + Send + 'static,
-    FUTS: FuturesArray<F> + Unpin + Send + 'static,
-    F: Future<Output = O> + Unpin + Send + 'static,
-{
-    pub fn as_boxed_stream(self) -> Pin<Box<dyn Stream<Item = O> + Send>> {
-        Box::pin(self)
-    }
-}
-
-impl<STREAM, STEP, FUTS, O, F> Stream for ItemStream<STREAM, STEP, FUTS>
+impl<STREAM, STEP, FUTS, O, F, ARGS> Stream for ItemStream<STREAM, STEP, FUTS, ARGS>
 where
     STREAM: Stream + Unpin,
-    STEP: FnMut(STREAM::Item) -> F + Unpin,
+    STEP: FnMut(STREAM::Item, ARGS) -> F + Unpin,
     FUTS: FuturesArray<F> + Unpin,
     F: Future<Output = O>,
+    ARGS: Clone + Unpin,
 {
     type Item = O;
 
@@ -93,7 +86,8 @@ where
 
         while let Poll::Ready(stream_out_opt) = this.stream.poll_next_unpin(cx) {
             if let Some(stream_out) = stream_out_opt {
-                this.futures_handler.push_fut((this.step_fn)(stream_out));
+                this.futures_handler
+                    .push_fut((this.step_fn)(stream_out, this.args.clone()));
 
                 if let Poll::Ready(Some(fut_out)) = this.futures_handler.poll_next_unpin(cx) {
                     return Poll::Ready(Some(fut_out));
