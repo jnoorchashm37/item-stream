@@ -20,9 +20,9 @@ pub struct ItemStream<STREAM, STEP, FUTS> {
 impl<STREAM, STEP, FUTS, O, F> ItemStream<STREAM, STEP, FUTS>
 where
     STREAM: Stream,
-    STEP: FnMut(STREAM::Item) -> F + 'static,
+    STEP: FnMut(STREAM::Item) -> F,
     FUTS: FuturesArray<F>,
-    F: Future<Output = O> + 'static,
+    F: Future<Output = O>,
 {
     pub fn new(stream: STREAM, step_fn: STEP, futures_handler: FUTS) -> Self {
         Self {
@@ -40,8 +40,8 @@ where
 impl<STREAM, STEP, O, F> ItemStream<STREAM, STEP, FuturesOrdered<F>>
 where
     STREAM: Stream,
-    STEP: FnMut(STREAM::Item) -> F + 'static,
-    F: Future<Output = O> + 'static,
+    STEP: FnMut(STREAM::Item) -> F,
+    F: Future<Output = O>,
 {
     pub fn new_ordered(stream: STREAM, step_fn: STEP) -> Self {
         Self {
@@ -55,8 +55,8 @@ where
 impl<STREAM, STEP, O, F> ItemStream<STREAM, STEP, FuturesUnordered<F>>
 where
     STREAM: Stream,
-    STEP: FnMut(STREAM::Item) -> F + 'static,
-    F: Future<Output = O> + 'static,
+    STEP: FnMut(STREAM::Item) -> F,
+    F: Future<Output = O>,
 {
     pub fn new_unordered(stream: STREAM, step_fn: STEP) -> Self {
         Self {
@@ -67,12 +67,24 @@ where
     }
 }
 
+impl<STREAM, STEP, FUTS, O, F> ItemStream<STREAM, STEP, FUTS>
+where
+    STREAM: Stream + Unpin + Send + 'static,
+    STEP: FnMut(STREAM::Item) -> F + Unpin + Send + 'static,
+    FUTS: FuturesArray<F> + Unpin + Send + 'static,
+    F: Future<Output = O> + Unpin + Send + 'static,
+{
+    pub fn as_boxed_stream(self) -> Pin<Box<dyn Stream<Item = O> + Send>> {
+        Box::pin(self)
+    }
+}
+
 impl<STREAM, STEP, FUTS, O, F> Stream for ItemStream<STREAM, STEP, FUTS>
 where
     STREAM: Stream + Unpin,
-    STEP: FnMut(STREAM::Item) -> F + Unpin + 'static,
+    STEP: FnMut(STREAM::Item) -> F + Unpin,
     FUTS: FuturesArray<F> + Unpin,
-    F: Future<Output = O> + 'static,
+    F: Future<Output = O>,
 {
     type Item = O;
 
