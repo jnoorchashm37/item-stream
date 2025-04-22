@@ -2,7 +2,7 @@
 
 Allows for producing asyncronous values from the outputs of streams via functions. An abstraction over the Stream + Futures(Un)Ordered fields of a struct.
 
-Similiar to `.then()` on streams values, however the addition to `ARGS` allows the bypassing of `'static` borrows inside the closure via `clone()`
+Similiar to `then()` on streams values, however the addition to `ARGS` allows the bypassing of `'static` borrows inside the closure via `clone()`
 
 ```rust
 pub struct ItemStream<STREAM, STEP, FUTS, ARGS> {
