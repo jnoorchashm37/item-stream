@@ -2,7 +2,7 @@
 
 Allows for producing asyncronous values from the outputs of streams. Creates an abstraction over the Stream + Futures(Un)Ordered fields of a struct.
 
-```rust
+```
 pub struct ItemStream<STREAM, STEP, FUTS> {
     stream: STREAM,
     step_fn: STEP,
