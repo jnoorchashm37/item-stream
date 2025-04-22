@@ -20,7 +20,7 @@ pub struct ItemStream<STREAM, STEP, FUTS> {
 impl<STREAM, STEP, FUTS, O, F> ItemStream<STREAM, STEP, FUTS>
 where
     STREAM: Stream,
-    STEP: FnMut(STREAM::Item) -> F,
+    STEP: FnMut(STREAM::Item) -> F + 'static,
     FUTS: FuturesArray<F>,
     F: Future<Output = O> + 'static,
 {
@@ -40,7 +40,7 @@ where
 impl<STREAM, STEP, O, F> ItemStream<STREAM, STEP, FuturesOrdered<F>>
 where
     STREAM: Stream,
-    STEP: FnMut(STREAM::Item) -> F,
+    STEP: FnMut(STREAM::Item) -> F + 'static,
     F: Future<Output = O> + 'static,
 {
     pub fn new_ordered(stream: STREAM, step_fn: STEP) -> Self {
@@ -55,7 +55,7 @@ where
 impl<STREAM, STEP, O, F> ItemStream<STREAM, STEP, FuturesUnordered<F>>
 where
     STREAM: Stream,
-    STEP: FnMut(STREAM::Item) -> F,
+    STEP: FnMut(STREAM::Item) -> F + 'static,
     F: Future<Output = O> + 'static,
 {
     pub fn new_unordered(stream: STREAM, step_fn: STEP) -> Self {
@@ -70,7 +70,7 @@ where
 impl<STREAM, STEP, FUTS, O, F> Stream for ItemStream<STREAM, STEP, FUTS>
 where
     STREAM: Stream + Unpin,
-    STEP: FnMut(STREAM::Item) -> F + Unpin,
+    STEP: FnMut(STREAM::Item) -> F + Unpin + 'static,
     FUTS: FuturesArray<F> + Unpin,
     F: Future<Output = O> + 'static,
 {
