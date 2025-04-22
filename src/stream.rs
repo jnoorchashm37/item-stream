@@ -22,7 +22,7 @@ where
     STREAM: Stream,
     STEP: FnMut(STREAM::Item) -> F,
     FUTS: FuturesArray<F>,
-    F: Future<Output = O> + 'static,
+    F: Future<Output = O>,
 {
     pub fn new(stream: STREAM, step_fn: STEP, futures_handler: FUTS) -> Self {
         Self {
@@ -41,7 +41,7 @@ impl<STREAM, STEP, O, F> ItemStream<STREAM, STEP, FuturesOrdered<F>>
 where
     STREAM: Stream,
     STEP: FnMut(STREAM::Item) -> F,
-    F: Future<Output = O> + 'static,
+    F: Future<Output = O>,
 {
     pub fn new_ordered(stream: STREAM, step_fn: STEP) -> Self {
         Self {
@@ -56,7 +56,7 @@ impl<STREAM, STEP, O, F> ItemStream<STREAM, STEP, FuturesUnordered<F>>
 where
     STREAM: Stream,
     STEP: FnMut(STREAM::Item) -> F,
-    F: Future<Output = O> + 'static,
+    F: Future<Output = O>,
 {
     pub fn new_unordered(stream: STREAM, step_fn: STEP) -> Self {
         Self {
